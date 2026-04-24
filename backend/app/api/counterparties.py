@@ -47,7 +47,10 @@ def create_counterparty(
             detail="Контрагент с таким ИНН уже существует"
         )
     
-    counterparty = Counterparty(**counterparty_data.model_dump())
+    counterparty = Counterparty(
+        **counterparty_data.model_dump(),
+        status=CounterpartyStatus.PENDING
+    )
     db.add(counterparty)
     db.commit()
     db.refresh(counterparty)

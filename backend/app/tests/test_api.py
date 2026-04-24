@@ -7,45 +7,79 @@ from sqlalchemy.pool import StaticPool
 # Тестовая база данных в памяти (SQLite)
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-
-@pytest.fixture(scope="function")
-def db_session():
-    """Создает тестовую сессию БД"""
+def create_test_app():
+    """Создает тестовое приложение с SQLite in-memory БД"""
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    
+    # Создаем тестовый движок и сессию
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    # Импортируем Base и модели для создания таблиц
     from app.database import Base
+    from app.models import User, Profile, Counterparty, Request, JournalEntry
+    
+    # Создаем все таблицы
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
+    
+    # Создаем приложение
+    app = FastAPI(title="СчетКонтроль Тест", version="1.0.0")
+    
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Переопределяем зависимость get_db
+    def get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    
+    # Импортируем роутеры
+    from app.api import auth, profiles, counterparties, requests, journal
+    
+    # Подключаем роутеры с переопределенной зависимостью
+    from app.database import get_db as original_get_db
+    
+    app.include_router(auth.router)
+    app.include_router(profiles.router)
+    app.include_router(counterparties.router)
+    app.include_router(requests.router)
+    app.include_router(journal.router)
+    
+    # Переопределяем зависимость для всех роутеров
+    app.dependency_overrides[original_get_db] = get_db
+    
+    @app.get("/")
+    def root():
+        return {"message": "СчетКонтроль API", "version": "1.0.0"}
+    
+    @app.get("/health")
+    def health_check():
+        return {"status": "ok"}
+    
+    return app
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
-    """Создает тестовый клиент с переопределенной БД"""
-    # Импортируем app и get_db здесь, чтобы избежать проблем с инициализацией
-    from app.main import app
-    from app.database import get_db
-    
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-
-    app.dependency_overrides[get_db] = override_get_db
-    
-    with TestClient(app) as test_client:
+def client():
+    """Создает тестовый клиент с изолированной SQLite БД"""
+    app = create_test_app()
+    with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
-    app.dependency_overrides.clear()
 
 
 def test_root(client):
@@ -69,7 +103,7 @@ def test_register_user(client):
     assert "id" in data
 
 
-def test_login_user(client, db_session):
+def test_login_user(client):
     """Тест входа пользователя"""
     # Сначала регистрируем
     client.post(
@@ -89,7 +123,7 @@ def test_login_user(client, db_session):
     assert "access_token" in data
 
 
-def test_login_wrong_password(client, db_session):
+def test_login_wrong_password(client):
     """Тест входа с неправильным паролем"""
     # Регистрируем
     client.post(
@@ -107,18 +141,20 @@ def test_login_wrong_password(client, db_session):
     assert response.status_code == 401
 
 
-def test_create_counterparty(client, db_session):
+def test_create_counterparty(client):
     """Тест создания контрагента"""
     # Регистрируемся и получаем токен
-    reg_response = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "cpuser",
-            "password": "cppass123",
-            "full_name": "Counterparty User"
+            "login": "cpuser",
+            "password": "cppass123"
         }
     )
-    token = reg_response.json()["access_token"]
+    login_response = client.post(
+        "/api/auth/login?login=cpuser&password=cppass123"
+    )
+    token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
     # Создаем контрагента
@@ -141,21 +177,23 @@ def test_create_counterparty(client, db_session):
     data = response.json()
     assert data["name"] == "ООО Тест"
     assert data["inn"] == "7701234567"
-    assert data["verification_status"] == "pending"
+    assert data["status"] == "pending"
 
 
-def test_get_counterparties(client, db_session):
+def test_get_counterparties(client):
     """Тест получения списка контрагентов"""
     # Регистрируемся
-    reg_response = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "cpviewuser",
-            "password": "cpviewpass123",
-            "full_name": "CP View User"
+            "login": "cpviewuser",
+            "password": "cpviewpass123"
         }
     )
-    token = reg_response.json()["access_token"]
+    login_response = client.post(
+        "/api/auth/login?login=cpviewuser&password=cpviewpass123"
+    )
+    token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
     # Получаем список (должен быть пустым)
@@ -165,18 +203,20 @@ def test_get_counterparties(client, db_session):
     assert isinstance(data, list)
 
 
-def test_create_request(client, db_session):
+def test_create_request(client):
     """Тест создания заявки"""
     # Регистрируемся
-    reg_response = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "requser",
-            "password": "reqpass123",
-            "full_name": "Request User"
+            "login": "requser",
+            "password": "reqpass123"
         }
     )
-    token = reg_response.json()["access_token"]
+    login_response = client.post(
+        "/api/auth/login?login=requser&password=reqpass123"
+    )
+    token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
     # Создаем контрагента
@@ -216,18 +256,20 @@ def test_create_request(client, db_session):
     assert "internal_number" in data
 
 
-def test_get_requests_engineer(client, db_session):
+def test_get_requests_engineer(client):
     """Тест: инженер видит только свои заявки"""
     # Создаем первого инженера и заявку
-    reg1 = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "engineer1",
-            "password": "eng1pass123",
-            "full_name": "Инженер 1"
+            "login": "engineer1",
+            "password": "eng1pass123"
         }
     )
-    token1 = reg1.json()["access_token"]
+    login_response1 = client.post(
+        "/api/auth/login?login=engineer1&password=eng1pass123"
+    )
+    token1 = login_response1.json()["access_token"]
     headers1 = {"Authorization": f"Bearer {token1}"}
     
     # Создаем контрагента
@@ -262,15 +304,17 @@ def test_get_requests_engineer(client, db_session):
     )
     
     # Создаем второго инженера
-    reg2 = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "engineer2",
-            "password": "eng2pass123",
-            "full_name": "Инженер 2"
+            "login": "engineer2",
+            "password": "eng2pass123"
         }
     )
-    token2 = reg2.json()["access_token"]
+    login_response2 = client.post(
+        "/api/auth/login?login=engineer2&password=eng2pass123"
+    )
+    token2 = login_response2.json()["access_token"]
     headers2 = {"Authorization": f"Bearer {token2}"}
     
     # Второй инженер создает свою заявку
@@ -294,18 +338,20 @@ def test_get_requests_engineer(client, db_session):
     assert data[0]["project_name"] == "Проект 1"
 
 
-def test_journal_entry_created(client, db_session):
+def test_journal_entry_created(client):
     """Тест: создание записи в журнале при создании заявки"""
     # Регистрируемся
-    reg_response = client.post(
+    client.post(
         "/api/auth/register",
         json={
-            "username": "journaluser",
-            "password": "jourpass123",
-            "full_name": "Journal User"
+            "login": "journaluser",
+            "password": "jourpass123"
         }
     )
-    token = reg_response.json()["access_token"]
+    login_response = client.post(
+        "/api/auth/login?login=journaluser&password=jourpass123"
+    )
+    token = login_response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
     # Создаем контрагента
