@@ -1,17 +1,13 @@
 export interface User {
-  id: number;
-  login: string;
-  is_active: boolean;
-  created_at: string;
+  id: string;
+  email: string;
 }
 
 export interface Profile {
-  id: number;
-  user_id: number;
+  id: string;
   full_name: string;
   role: UserRole;
   created_at: string;
-  updated_at: string;
 }
 
 export enum UserRole {
@@ -39,24 +35,21 @@ export enum CounterpartyStatus {
 }
 
 export interface Counterparty {
-  id: number;
+  id: string;
   name: string;
   inn: string;
-  kpp?: string;
   legal_address?: string;
   bank_name?: string;
   bik?: string;
-  checking_account?: string;
-  correspondent_account?: string;
+  account_number?: string;
   status: CounterpartyStatus;
-  checked_by_id?: number;
-  checked_at?: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface Request {
-  id: number;
+  id: string;
   internal_number: string;
   project_name: string;
   deal_number: string;
@@ -64,27 +57,17 @@ export interface Request {
   invoice_url: string;
   amount?: number;
   status: RequestStatus;
-  created_by_id: number;
-  counterparty_id: number;
-  approved_by_id?: number;
-  approved_at?: string;
+  created_by?: string;
+  counterparty_id: string;
   paid_at?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface JournalEntry {
-  id: number;
+  id: string;
+  user_id: string;
   action: string;
-  description?: string;
-  entity_type?: string;
-  entity_id?: number;
-  performed_by_id: number;
-  performer_full_name?: string;
-  performed_at: string;
-}
-
-export interface Token {
-  access_token: string;
-  token_type: string;
+  details?: any;
+  created_at: string;
 }
