@@ -6,7 +6,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models.request import Request
 from app.models.counterparty import Counterparty
-from app.models.profile import Profile
+from app.models.user import Profile
 from app.models.journal import JournalEntry
 from app.schemas.request import RequestCreate, RequestResponse, RequestUpdate
 from app.core.dependencies import get_current_profile, require_role

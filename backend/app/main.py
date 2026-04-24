@@ -1,15 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine, Base
 from app.api import auth, profiles, counterparties, requests, journal
 from app.config import settings
 from app.core.security import get_password_hash
 from app.models.user import User, Profile
 from app.core.enums import UserRole
+from app.database import engine, Base, SessionLocal
 
-# Создание таблиц
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,10 +27,11 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Создание администратора при первом запуске"""
-    from sqlalchemy.orm import Session
-    from app.database import SessionLocal
+    """Создание таблиц БД и администратора при первом запуске"""
+    # Создание таблиц
+    Base.metadata.create_all(bind=engine)
     
+    # Создание администратора при первом запуске
     db = SessionLocal()
     try:
         # Проверка существования админа
