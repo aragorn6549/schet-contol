@@ -4,7 +4,7 @@ from typing import List
 
 from app.database import get_db
 from app.models.journal import JournalEntry
-from app.models.profile import Profile
+from app.models.user import Profile
 from app.schemas.journal import JournalEntryResponse
 from app.core.dependencies import get_current_profile
 
