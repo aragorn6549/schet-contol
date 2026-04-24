@@ -1,36 +1,58 @@
 ```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.ENV
-.venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
+# Dependencies
+node_modules/
 
-# Testing
-.pytest_cache/
-.coverage
-coverage/
-htmlcov/
+# Environment variables
+.env
+.env.local
+.env.*
 
-# IDE
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.vercel/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
 
-# Logs
-*.log
-
-# Environment
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
 .env
-.env.local
-.env.*
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Coverage reports
+coverage/
+*.gcov
+*.lcov
+
+# Compressed archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.gz
+*.rar
+*.7z
 ```
