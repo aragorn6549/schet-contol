@@ -42,6 +42,7 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -58,15 +59,14 @@ def test_register_user(client):
     response = client.post(
         "/api/auth/register",
         json={
-            "username": "testuser",
-            "password": "testpass123",
-            "full_name": "Тест Пользователь"
+            "login": "testuser",
+            "password": "testpass123"
         }
     )
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert data["login"] == "testuser"
+    assert "id" in data
 
 
 def test_login_user(client, db_session):
@@ -75,19 +75,14 @@ def test_login_user(client, db_session):
     client.post(
         "/api/auth/register",
         json={
-            "username": "loginuser",
-            "password": "loginpass123",
-            "full_name": "Логин Тест"
+            "login": "loginuser",
+            "password": "loginpass123"
         }
     )
     
     # Затем входим
     response = client.post(
-        "/api/auth/login",
-        json={
-            "username": "loginuser",
-            "password": "loginpass123"
-        }
+        "/api/auth/login?login=loginuser&password=loginpass123"
     )
     assert response.status_code == 200
     data = response.json()
@@ -100,19 +95,14 @@ def test_login_wrong_password(client, db_session):
     client.post(
         "/api/auth/register",
         json={
-            "username": "wrongpassuser",
-            "password": "correctpass123",
-            "full_name": "Wrong Pass Test"
+            "login": "wrongpassuser",
+            "password": "correctpass123"
         }
     )
     
     # Пытаемся войти с неправильным паролем
     response = client.post(
-        "/api/auth/login",
-        json={
-            "username": "wrongpassuser",
-            "password": "wrongpass123"
-        }
+        "/api/auth/login?login=wrongpassuser&password=wrongpass123"
     )
     assert response.status_code == 401
 
