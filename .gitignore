@@ -2,57 +2,26 @@
 # Dependencies
 node_modules/
 
+# TypeScript/JavaScript build output
+dist/
+build/
+*.js.map
+*.tsbuildinfo
+
 # Environment variables
 .env
 .env.local
-.env.*
+*.env.*
 
-# Build outputs
-dist/
-build/
-.next/
-.nuxt/
-.vercel/
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Editor files
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Logs
+*.log
+
+# Temporary files
 *.tmp
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-venv/
-.venv/
-.env
-.coverage
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-
-# Coverage reports
-coverage/
-*.gcov
-*.lcov
-
-# Compressed archives
-*.zip
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.gz
-*.rar
-*.7z
 ```
