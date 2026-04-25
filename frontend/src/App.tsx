@@ -4,7 +4,7 @@ import { authApi } from './services/api';
 import { Profile, UserRole } from './types';
 
 // Placeholder components - будут реализованы отдельно
-const LoginPage = ({ onLogin }: { onLogin: () => void }) => (
+const LoginPage = ({ onLogin }: { onLogin?: () => void }) => (
   <div className="p-8">
     <h1 className="text-2xl">Login Page</h1>
     <p className="mt-4 text-gray-600">Вход через Supabase Auth</p>
@@ -23,7 +23,7 @@ const RequestsPage = ({ profile }: { profile: Profile }) => (
     <p className="mt-4 text-gray-600">Управление заявками для роли: {profile.role}</p>
   </div>
 );
-const CounterpartiesPage = ({ profile }: { profile: Profile }) => (
+const CounterpartiesPage = ({ profile }: { profile?: Profile }) => (
   <div className="p-8">
     <h1 className="text-2xl">Контрагенты</h1>
     <p className="mt-4 text-gray-600">Справочник контрагентов</p>
